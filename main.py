@@ -126,7 +126,7 @@ def get_sales_data(view_option):
 def get_customer_purchases(customer_id):
     conn = create_connection()
     c = conn.cursor()
-    c.execute("SELECT * FROM purchases WHERE customer_id = ?", (customer_id,))
+    c.execute("SELECT amount, payment_method, date FROM purchases WHERE customer_id = ?", (customer_id,))
     purchases = c.fetchall()
     conn.close()
     return purchases
@@ -134,7 +134,7 @@ def get_customer_purchases(customer_id):
 def get_customer_refunds(customer_id):
     conn = create_connection()
     c = conn.cursor()
-    c.execute("SELECT * FROM refunds WHERE customer_id = ?", (customer_id,))
+    c.execute("SELECT amount, date FROM refunds WHERE customer_id = ?", (customer_id,))
     refunds = c.fetchall()
     conn.close()
     return refunds
@@ -147,8 +147,6 @@ def get_customer_refunds(customer_id):
 #choice = st.sidebar.radio("메뉴 선택", menu)
 
 st.set_page_config(layout="wide")
-
-# CSS 스타일을 설정하여 사이드바의 크기 조절
 
 st.markdown(
     """
@@ -169,7 +167,7 @@ with st.sidebar:
         "nav-link": {"font-size": "15px", "text-align": "left", "margin":"0px", "--hover-color": "#eee"},
         "nav-link-selected": {"background-color": "#02ab21"},
         "menu-title": {  # Add this style block for the menu title
-            "font-size": "25px",  # Adjust the font size
+            "font-size": "22px",  # Adjust the font size
             "font-weight": "bold",  # Adjust the font weight
             "margin": "0px"  # Adjust the margin
         }
@@ -181,8 +179,9 @@ if choice == "고객 조회":
     st.title("고객 조회")
         
     # 화면 분할
-    col1, empty_col, col2 = st.columns([1, 0.3, 1])
+    col1, empty_col, col2, empty_col2 = st.columns([1, 0.1, 1, 0.1])
     empty_col.empty()
+    empty_col2.empty()
     
     search_option = col1.radio("<검색 옵션>", ("이름", "핸드폰 번호"))
     search_value = col1.text_input(f"{search_option} 입력").strip()
@@ -220,8 +219,8 @@ if choice == "고객 조회":
             col2.write("---")
 
             col1.write("---")
-            
-            sub_col1, sub_col2, sub_col3= col1.columns([1, 1, 1])
+
+            sub_col1, sub_col2, sub_col3= col1.columns([0.8, 1, 1])
             
             if sub_col1.button('제품 구매'):
                 st.session_state['purchase_mode'] = True
@@ -251,7 +250,7 @@ if choice == "고객 조회":
                 st.session_state['del_customer_mode'] = True
                 st.session_state['refusal_setting_mode'] = False
                 
-            if sub_col2.button('문자 수신 거부'):
+            if sub_col2.button('문자 수신거부'):
                 st.session_state['purchase_mode'] = False
                 st.session_state['refund_mode'] = False
                 st.session_state['use_mileage_mode'] = False
@@ -260,12 +259,12 @@ if choice == "고객 조회":
                 
             col2.subheader("구매 내역")
             purchases = get_customer_purchases(customer[0])
-            df_purchases = pd.DataFrame(purchases, columns=['ID', 'Customer ID', 'Amount', 'Payment Method', 'Date                                        '])
+            df_purchases = pd.DataFrame(purchases, columns=['Amount', 'Payment Method', 'Date                                        '])
             col2.dataframe(df_purchases, height=300)
 
             col2.subheader("환불 내역")
             refunds = get_customer_refunds(customer[0])
-            df_refunds = pd.DataFrame(refunds, columns=['ID', 'Customer ID', 'Amount', 'Date                                        '])
+            df_refunds = pd.DataFrame(refunds, columns=['Amount', 'Date                                        '])
             col2.dataframe(df_refunds, height=300   )
             
         elif customer==False:
@@ -357,7 +356,7 @@ if choice == "고객 조회":
 elif choice == "고객 추가":
     st.title("고객 추가")
     # 화면 분할
-    col1, empty_col, col2 = st.columns([1, 0.3, 1])
+    col1, empty_col, col2 = st.columns([1, 0.1, 1])
     empty_col.empty()
     
     name = col1.text_input("이름").strip()
@@ -384,7 +383,7 @@ elif choice == "고객 명단 조회":
     st.title("고객 명단 조회")
     customers = get_all_customers()
     df_customers = pd.DataFrame(customers, columns=['이름', '전화번호', '마일리지', '누적 구매금액'])
-    st.dataframe(df_customers, height=700, width=900)
+    st.dataframe(df_customers, height=700, width=800)
 
 elif choice == "고객 명단 내보내기":
     st.title("고객 명단 내보내기")
@@ -395,7 +394,7 @@ elif choice == "고객 명단 내보내기":
 elif choice == "매출 조회":
     st.title("매출 조회")
     # 화면 분할 
-    col1, empty_col, col2 = st.columns([1, 0.3, 1])
+    col1, empty_col, col2 = st.columns([1, 0.1, 1])
     empty_col.empty()
     
     view_option = col1.radio("<조회 옵션>", ("일별", "월별", "년별"))
@@ -436,7 +435,6 @@ elif choice == "매출 조회":
     col1.write(f"<p style='font-size:20px;font-weight:bold;'>다녀간 손님 수: {format(len(names), ',')}명 </p>", unsafe_allow_html=True)
     if not vips.empty:
         col1.write(f"<p style='font-size:20px;font-weight:bold;'>VIP: {vips.iloc[0].name}  ( 구매 금액: {format(int(vips.iloc[0].get('Amount')), ',')} ₩ )", unsafe_allow_html=True)
-    
     
     # 구매 내역
     col2.subheader("구매 내역")
