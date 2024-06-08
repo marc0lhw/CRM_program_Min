@@ -1,0 +1,1 @@
+streamlit run --server.address localhost .\main.py
