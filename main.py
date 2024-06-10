@@ -82,7 +82,7 @@ def get_all_customers():
 def get_all_customers_for_csv():
     conn = create_connection()
     c = conn.cursor()
-    c.execute("SELECT phone, name, group_type, refusal_status FROM customers WHERE deleted_status != '삭제'")
+    c.execute("SELECT phone, name, group_type, refusal_status FROM customers WHERE deleted_status != '삭제' AND name != '비회원'")
     customers = c.fetchall()
     conn.close()
     return customers
@@ -365,17 +365,18 @@ elif choice == "고객 추가":
         if not re.match(r"^010-\d{4}-\d{4}$", phone):
             col1.error("올바른 핸드폰 번호 형식이 아닙니다. (예: 010-1234-5678)")
         else:
-            if get_customer_by_name_or_phone(name=name) != None:
+            if get_customer_by_name_or_phone(name=name):
                 col1.error("이름이 중복되는 고객입니다.")
-            elif get_customer_by_name_or_phone(phone=phone) != None:
+            elif get_customer_by_name_or_phone(phone=phone):
                 col1.error("전화번호가 중복되는 고객입니다.")
             else:
                 add_customer(name, phone)
                 customer = get_customer_by_name_or_phone(name=name)
+                
                 col2.subheader("고객정보")
-                col2.write(f"이름: {customer[1]}")
-                col2.write(f"전화번호: {customer[2]}")
-                col2.write(f"마일리지: {customer[3]}")
+                col2.write(f"이름: {customer[0][1]}")
+                col2.write(f"전화번호: {customer[0][2]}")
+                col2.write(f"마일리지: {customer[0][3]}")
                 col2.write("---")
                 col1.success("고객 추가 완료")
 
@@ -400,13 +401,13 @@ elif choice == "매출 조회":
     view_option = col1.radio("<조회 옵션>", ("일별", "월별", "년별"))
     if view_option == "일별":
         date_format = "%Y-%m-%d"
-        now = datetime.datetime.now(timezone('Asia/Seoul')).strftime('%Y년 %m월 %d일')
+        now = datetime.datetime.now(timezone('Asia/Seoul')).strftime('%Y년 %m월 %d일'.encode('unicode-escape').decode()).encode().decode('unicode-escape')
     elif view_option == "월별":
         date_format = "%Y-%m-%d"
-        now = datetime.datetime.now(timezone('Asia/Seoul')).strftime('%Y년 %m월')
+        now = datetime.datetime.now(timezone('Asia/Seoul')).strftime('%Y년 %m월'.encode('unicode-escape').decode()).encode().decode('unicode-escape')
     else:
         date_format = "%Y-%m"
-        now = datetime.datetime.now(timezone('Asia/Seoul')).strftime('%Y년')
+        now = datetime.datetime.now(timezone('Asia/Seoul')).strftime('%Y년'.encode('unicode-escape').decode()).encode().decode('unicode-escape')
 
     purchases, refunds = get_sales_data(view_option)
    
@@ -427,14 +428,25 @@ elif choice == "매출 조회":
     df_purchases = pd.DataFrame(purchases, columns=['ID', 'Customer ID', 'Name', 'Amount', 'Payment Method', 'Date'])
     df_purchases['Date'] = pd.to_datetime(df_purchases['Date']).dt.strftime(date_format)
     vips = df_purchases.groupby(['Name']).agg({'Amount': 'sum'}).sort_values(by='Amount', ascending=False)
-    
+
     col1.subheader(now)
     col1.write("---")
     col1.markdown(f"<p style='font-size:20px;font-weight:bold;'>매출 총액:  {format(total_sales, ',')} ₩</p>", unsafe_allow_html=True)
     col1.write(f"(매출: {format(total_purchase, ',')}₩ / 환불: {format(total_refund, ',')}₩ )")
     col1.write(f"<p style='font-size:20px;font-weight:bold;'>다녀간 손님 수: {format(len(names), ',')}명 </p>", unsafe_allow_html=True)
     if not vips.empty:
-        col1.write(f"<p style='font-size:20px;font-weight:bold;'>VIP: {vips.iloc[0].name}  ( 구매 금액: {format(int(vips.iloc[0].get('Amount')), ',')} ₩ )", unsafe_allow_html=True)
+        len_vip = len(vips)
+        noname = 0
+        i=0
+        while i < noname+5:
+            if i == len_vip:
+                break
+            if vips.iloc[i].name == '비회원':
+                noname = 1
+            else:
+                col1.write(f"<p style='font-size:20px;font-weight:bold;'> {i+1-noname}등 손님: {vips.iloc[i].name}  ( 구매 금액: {format(int(vips.iloc[i].get('Amount')), ',')} ₩ )", unsafe_allow_html=True)
+            i = i+1
+            
     
     # 구매 내역
     col2.subheader("구매 내역")
